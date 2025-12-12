@@ -38,13 +38,15 @@
        1:   開始時、Tコードモードをオンにする。
 バッファローカル変数。")
 
-(defcustom tcode-isearch-enable-wrapped-search t
+(define-obsolete-variable-alias 'tcode-isearch-enable-wrapped-search
+  'tcode-isearch-enable-line-fold-search "2025-12-09")
+(defcustom tcode-isearch-enable-line-fold-search t
   "*2バイト文字でサーチするときに、空白や改行を無視する。"
   :type 'boolean :group 'tcode)
 
 (defcustom tcode-isearch-ignore-regexp "[\n \t]*"
   "* 2バイト文字間に入る正規表現。
-`tcode-isearch-enable-wrapped-search' が t のときのみ有効。"
+`tcode-isearch-enable-line-fold-search' が t のときのみ有効。"
   :type 'regexp :group 'tcode)
 
 (defcustom tcode-isearch-special-function-alist
@@ -83,7 +85,7 @@
 (defadvice isearch-search-string (around tcode-handling activate)
   (let ((isearch-regexp (if (or (tcode-isearch-regexp-function) isearch-regexp)
                             isearch-regexp
-                          tcode-isearch-enable-wrapped-search)))
+                          tcode-isearch-enable-line-fold-search)))
     ad-do-it))
 
 (defun isearch-printing-char ()
@@ -144,8 +146,8 @@
 (defadvice isearch-process-search-char (around tcode-handling activate)
   "Extention for T-code"
   (if (and (not isearch-regexp)
-	   (boundp 'tcode-isearch-enable-wrapped-search)
-	   tcode-isearch-enable-wrapped-search
+	   (boundp 'tcode-isearch-enable-line-fold-search)
+	   tcode-isearch-enable-line-fold-search
 	   (memq char '(?$ ?* ?+ ?. ?? ?\[ ?\\ ?\] ?^)))
       (let ((s (char-to-string char)))
 	(isearch-process-search-string (concat "\\" s) s))
@@ -168,7 +170,7 @@
       (setq string (downcase string)))
   (if isearch-regexp (setq string (regexp-quote string)))
   (setq isearch-string (concat isearch-string
-			       (tcode-isearch-make-string-for-wrapping string))
+			       (tcode-isearch-make-string-for-line-fold string))
 	isearch-message
 	(concat isearch-message
 		(mapconcat 'isearch-text-char-description string ""))
@@ -282,7 +284,7 @@
 			(string= msg (tcode-isearch--state-message (car isearch-cmds))))
 	      (isearch-delete-char)))
 	  (isearch-process-search-string
-	   (tcode-isearch-make-string-for-wrapping s) s))
+	   (tcode-isearch-make-string-for-line-fold s) s))
       (ding)
       (isearch-update))))
 
@@ -294,7 +296,7 @@ PREV と合成できるときはその合成した文字で検索する。"
     (isearch-process-search-string
      (if prev
 	 ""
-       (tcode-isearch-make-string-for-wrapping str)) str)))
+       (tcode-isearch-make-string-for-line-fold str)) str)))
 
 (defun tcode-regexp-unquote (str)
   (let* ((ll (string-to-list str))
@@ -308,9 +310,9 @@ PREV と合成できるときはその合成した文字で検索する。"
     (mapconcat (function char-to-string) ll nil)))
 
 (defun tcode-isearch-remove-ignore-regexp (str)
-  "変数 `tcode-isearch-enable-wrapped-search' が nil でないとき、
+  "変数 `tcode-isearch-enable-line-fold-search' が nil でないとき、
 STR から `tcode-isearch-ignore-regexp' を取り除く。"
-  (if (or (not tcode-isearch-enable-wrapped-search)
+  (if (or (not tcode-isearch-enable-line-fold-search)
 	  isearch-regexp)
       str
     (let (idx
@@ -322,10 +324,10 @@ STR から `tcode-isearch-ignore-regexp' を取り除く。"
 			  (substring str (+ idx regexp-len) nil))))
       (tcode-regexp-unquote str))))
 
-(defun tcode-isearch-make-string-for-wrapping (string)
+(defun tcode-isearch-make-string-for-line-fold (string)
   (let ((string-list (and string
 			  (string-to-list string))))
-    (if (and tcode-isearch-enable-wrapped-search
+    (if (and tcode-isearch-enable-line-fold-search
 	     (not isearch-regexp)
 	     string-list)
 	(mapconcat
