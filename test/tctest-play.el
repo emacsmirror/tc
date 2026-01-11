@@ -25,6 +25,7 @@ Keyword arguments:
   :timeout SECONDS  Stop the macro after the specified duration.
   :buf BUFFER       Use BUFFER instead of creating a new one.
   :no-ding t        Do not insert `<DING>'.
+  :quiet t          Stop showing messages to echo area and stderr.
   :setup-fun FUN    Call FUN before running the macro.
   :cleanup-fun FUN  Call FUN after running the macro.
   :no-kbd t         Pass KEYS directly to `execute-kbd-macro'
@@ -40,11 +41,13 @@ sole argument to both :setup-fun and :cleanup-fun."
 	 (initial      (gethash :initial      params))
 	 (timeout      (gethash :timeout      params))
 	 (buf          (gethash :buf          params))
+	 (quiet        (gethash :quiet        params))
 	 (no-kbd       (gethash :no-kbd       params))
 	 (no-ding      (gethash :no-ding      params))
 	 (setup-fun    (gethash :setup-fun    params))
 	 (cleanup-fun  (gethash :cleanup-fun  params))
-	 (error-filter (gethash :error-filter params)))
+	 (error-filter (gethash :error-filter params))
+	 (inhibit-message quiet))
     (puthash :keys keys params)
     (when (null buf)
       (setq buf (generate-new-buffer "*play*"))
@@ -225,6 +228,13 @@ hash-table DEFAULT-PARAMS."
   #s(hash-table data (:show-buf nil))
   "Default values used by `tctest-cmp'.")
 
+(defun tctest-load-tc ()
+  "tc.el がロード済みの状態にする。"
+  ;; (require 'tc) でも十分だが、テストなので念のため、ユーザーの使用
+  ;; 方法に準じた操作のみで実現する。
+  (toggle-input-method)  ; 初回の有効化で、tc.el がロードされる。
+  (toggle-input-method))
+
 (defun tctest-cmp (keys &rest args)
   "T-Code テスト用の設定を行なった上で、`tctest-check'を呼ぶ。
 tctest-check および tctest-play の受け取る引数に加えて、以下の
@@ -232,8 +242,7 @@ tctest-check および tctest-play の受け取る引数に加えて、以下の
   :vars ((VAR VAL)...) : テストの間だけ、変数 VAR に 値 VAL をセットする。
   :requires (PKG...)   : (require PKG) を実行する。
   :input-method NAME   : テストの間だけ input method を NAME に変更する。"
-  (toggle-input-method) ; load tc
-  (toggle-input-method)
+  (tctest-load-tc)  ; T-Code 表の逆引きのために必要。
   (let* ((params (tctest-fill-params tctest-cmp-default-params args))
 	 (setup-user-fun   (gethash :setup-fun   params))
 	 (cleanup-user-fun (gethash :cleanup-fun params)))
